@@ -1,0 +1,64 @@
+Table users {
+  id int [pk, increment]
+  username varchar(50) [not null, unique]
+  email varchar(150) [not null, unique]
+  password_hash varchar(255) [not null]
+  role varchar(20) [not null, default: 'player', note: 'player, admin']
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table categories {
+  id int [pk, increment]
+  name varchar(100) [not null, unique]
+  description varchar(200)
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+}
+
+Table questions {
+  id int [pk, increment]
+  category_id int [ref: > categories.id]
+  created_by int [ref: > users.id]
+  statement text [not null]
+  explanation text [note: 'Explicacion opcional para mostrar despues de responder']
+  difficulty varchar(20) [not null, default: 'medium', note: 'easy, medium, hard']
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table answers {
+  id int [pk, increment]
+  question_id int [not null, ref: > questions.id]
+  answer_text varchar(20) [not null, note: 'Real o Inventado']
+  is_correct boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table quiz_attempts {
+  id int [pk, increment]
+  user_id int [not null, ref: > users.id]
+  category_id int [ref: > categories.id]
+  status varchar(20) [not null, default: 'completed', note: 'in_progress, completed, abandoned']
+  total_questions int [not null, default: 0]
+  correct_answers int [not null, default: 0]
+  score int [not null, default: 0]
+  started_at timestamp [not null]
+  finished_at timestamp
+}
+
+Table user_answers {
+  id int [pk, increment]
+  attempt_id int [not null, ref: > quiz_attempts.id]
+  question_id int [not null, ref: > questions.id]
+  answer_id int [not null, ref: > answers.id]
+  is_correct boolean [not null]
+  answered_at timestamp [not null]
+
+  indexes {
+    (attempt_id, question_id) [unique]
+  }
+}

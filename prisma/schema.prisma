@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+//// ENUMS
+
+enum UserRole {
+  player
+  admin
+}
+
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+
+enum AttemptStatus {
+  in_progress
+  completed
+  abandoned
+}
+
+//// MODELS
+
+model User {
+  id            Int           @id @default(autoincrement())
+  username      String        @unique @db.VarChar(50)
+  email         String        @unique @db.VarChar(150)
+  password_hash String        @db.VarChar(255)
+  role          UserRole      @default(player)
+  is_active     Boolean       @default(true)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  
+  // Relaciones
+  questions     Question[]    @relation("UserQuestions")
+  quiz_attempts QuizAttempt[]
+  user_answers  UserAnswer[]  // Ahora sí tiene contraparte en UserAnswer
+
+  @@map("user") 
+}
+
+model Category {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique @db.VarChar(100)
+  description String?       @db.VarChar(200)
+  is_active   Boolean       @default(true)
+  created_at  DateTime      @default(now())
+
+  // Relaciones
+  questions   Question[]
+  attempts    QuizAttempt[]
+
+  @@map("category") 
+}
+
+model Question {
+  id          Int           @id @default(autoincrement())
+  category_id Int?
+  created_by  Int?
+  statement   String        @db.Text
+  explanation String?       @db.Text
+  difficulty  Difficulty    @default(medium)
+  is_active   Boolean       @default(true)
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  // Relaciones
+  category    Category?     @relation(fields: [category_id], references: [id])
+  user        User?         @relation("UserQuestions", fields: [created_by], references: [id])
+  answers     Answer[]
+  user_answers UserAnswer[]
+
+  @@map("question") 
+}
+
+model Answer {
+  id          Int           @id @default(autoincrement())
+  question_id Int
+  answer_text String        @db.VarChar(20)
+  is_correct  Boolean       @default(false)
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  // Relaciones
+  question    Question      @relation(fields: [question_id], references: [id])
+  user_answers UserAnswer[]
+
+  @@map("answer") 
+}
+
+model QuizAttempt {
+  id              Int           @id @default(autoincrement())
+  user_id         Int
+  category_id     Int?
+  status          AttemptStatus @default(completed)
+  total_questions Int           @default(0)
+  correct_answers Int           @default(0)
+  score           Int           @default(0)
+  started_at      DateTime      @default(now())
+  finished_at     DateTime?
+
+  // Relaciones
+  user            User          @relation(fields: [user_id], references: [id])
+  category        Category?     @relation(fields: [category_id], references: [id])
+  user_answers    UserAnswer[]
+
+  @@map("quiz_attempt")
+}
+
+model UserAnswer {
+  id          Int      @id @default(autoincrement())
+  user_id     Int      // Añadido para resolver la relación con User
+  attempt_id  Int
+  question_id Int
+  answer_id   Int
+  is_correct  Boolean
+  answered_at DateTime @default(now())
+
+  // Relaciones
+  user        User        @relation(fields: [user_id], references: [id]) // Contraparte faltante
+  attempt     QuizAttempt @relation(fields: [attempt_id], references: [id])
+  question    Question    @relation(fields: [question_id], references: [id])
+  answer      Answer      @relation(fields: [answer_id], references: [id])
+
+  @@unique([attempt_id, question_id])
+  @@map("user_answer") 
+}
